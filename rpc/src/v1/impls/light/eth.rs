@@ -46,7 +46,7 @@ use v1::helpers::light_fetch::{self, LightFetch};
 use v1::traits::Eth;
 use v1::types::{
 	RichBlock, Block, BlockTransactions, BlockNumber, Bytes, SyncStatus, SyncInfo,
-	Transaction, CallRequest, Index, Filter, Log, Receipt, Work,
+	Transaction, CallRequest, Index, Filter, Log, Receipt, Work, AccountStatus,
 	H64 as RpcH64, H256 as RpcH256, H160 as RpcH160, U256 as RpcU256,
 };
 use v1::metadata::Metadata;
@@ -300,6 +300,22 @@ impl<T: LightChainClient + 'static> Eth for EthClient<T> {
 	fn transaction_count(&self, address: RpcH160, num: Trailing<BlockNumber>) -> BoxFuture<RpcU256> {
 		Box::new(self.fetcher().account(address.into(), Self::num_to_id(num.unwrap_or_default()))
 			.map(|acc| acc.map_or(0.into(), |a| a.nonce).into()))
+	}
+
+	fn account_status(&self, address: RpcH160, num: Trailing<BlockNumber>) -> BoxFuture<AccountStatus> {
+
+		let resBalance = self.fetcher().account(address.into(), Self::num_to_id(num.unwrap_or_default()))
+			.map(|acc| acc.map_or(0.into(), |a| a.balance).into());
+
+		let resNonce = self.fetcher().account(address.into(), Self::num_to_id(num.unwrap_or_default()))
+			.map(|acc| acc.map_or(0.into(), |a| a.nonce).into());
+
+		let result = AccountStatus{
+			balance: resBalance,
+			nonce: resNonce
+		};
+
+		Box::new(future::done(result))
 	}
 
 	fn block_transaction_count_by_hash(&self, hash: RpcH256) -> BoxFuture<Option<RpcU256>> {

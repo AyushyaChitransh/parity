@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Parity.  If not, see <http://www.gnu.org/licenses/>.
 
+use v1::types::{ U256};
+
 /// Account information.
 #[derive(Debug, Default, Clone, PartialEq, Serialize)]
 pub struct AccountInfo {
@@ -40,5 +42,13 @@ pub struct HwAccountInfo {
 	pub name: String,
 	/// Device manufacturer.
 	pub manufacturer: String,
+}
+
+/// Wallet current status information.
+#[derive(Debug, Default, Clone, PartialEq, Serialize)]
+pub struct AccountStatus {
+	pub balance: U256,
+	/// Number of txns sent by an account
+	pub nonce: U256,
 }
 
