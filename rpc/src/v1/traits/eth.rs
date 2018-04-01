@@ -19,7 +19,7 @@ use jsonrpc_core::{Result, BoxFuture};
 use jsonrpc_macros::Trailing;
 
 use v1::types::{RichBlock, BlockNumber, Bytes, CallRequest, Filter, FilterChanges, Index};
-use v1::types::{Log, Receipt, SyncStatus, Transaction, Work};
+use v1::types::{Log, Receipt, SyncStatus, Transaction, Work, AccountStatus};
 use v1::types::{H64, H160, H256, U256};
 
 build_rpc_trait! {
@@ -62,6 +62,10 @@ build_rpc_trait! {
 		/// Returns balance of the given account.
 		#[rpc(name = "eth_getBalance")]
 		fn balance(&self, H160, Trailing<BlockNumber>) -> BoxFuture<U256>;
+
+		/// Returns balance of the given account.
+		#[rpc(name = "eth_accountStatus")]
+		fn account_status(&self, H160, Trailing<BlockNumber>) -> BoxFuture<AccountStatus>;
 
 		/// Returns content of the storage at given address.
 		#[rpc(name = "eth_getStorageAt")]

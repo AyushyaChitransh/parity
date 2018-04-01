@@ -50,7 +50,7 @@ use v1::helpers::accounts::unwrap_provider;
 use v1::traits::Eth;
 use v1::types::{
 	RichBlock, Block, BlockTransactions, BlockNumber, Bytes, SyncStatus, SyncInfo,
-	Transaction, CallRequest, Index, Filter, Log, Receipt, Work,
+	Transaction, CallRequest, Index, Filter, Log, Receipt, Work, AccountStatus,
 	H64 as RpcH64, H256 as RpcH256, H160 as RpcH160, U256 as RpcU256, block_number_to_id,
 };
 use v1::metadata::Metadata;
@@ -600,10 +600,56 @@ impl<C, SN: ?Sized, S: ?Sized, M, EM, T: StateInfo + 'static> Eth for EthClient<
 		Box::new(future::done(res))
 	}
 
-	fn account_status(&self, address: RpcH160, num: Trailing<BlockNumber>) -> BoxFuture<RpcU256>{
-		let balance = self.balance(address, num);
-		let nonce = self.transaction_count(address, num);
-		return balance;
+	fn account_status(&self, address: RpcH160, num: Trailing<BlockNumber>) -> BoxFuture<AccountStatus> {
+		let address = address.into();
+
+		let num = num.unwrap_or_default();
+
+		try_bf!(check_known(&*self.client, num.clone()));
+		let resBalance = match self.client.balance(&address, self.get_state(num)) {
+			Some(balance) => Ok(balance.into()),
+			None => Err(errors::state_pruned()),
+		};
+		let address: Address = RpcH160::into(address);
+
+		let res = match num.unwrap_or_default() {
+			BlockNumber::Pending if self.options.pending_nonce_from_queue => {
+				let nonce = self.miner.last_nonce(&address)
+					.map(|n| n + 1.into())
+					.or_else(|| self.client.nonce(&address, BlockId::Latest));
+
+				match nonce {
+					Some(nonce) => Ok(nonce.into()),
+					None => Err(errors::database("latest nonce missing"))
+				}
+			},
+
+			BlockNumber::Pending => {
+				let info = self.client.chain_info();
+				let nonce = self.miner
+					.pending_state(info.best_block_number)
+					.and_then(|s| s.nonce(&address).ok())
+					.or_else(|| {
+						warn!("Fallback to `BlockId::Latest`");
+						self.client.nonce(&address, BlockId::Latest)
+					});
+
+				match nonce {
+					Some(nonce) => Ok(nonce.into()),
+					None => Err(errors::database("latest nonce missing"))
+				}
+			},
+
+			number => {
+				try_bf!(check_known(&*self.client, number.clone()));
+				match self.client.nonce(&address, block_number_to_id(number)) {
+					Some(nonce) => Ok(nonce.into()),
+					None => Err(errors::state_pruned()),
+				}
+			}
+		};
+
+		Box::new(future::done(res))
 	}
 
 	fn block_transaction_count_by_hash(&self, hash: RpcH256) -> BoxFuture<Option<RpcU256>> {
@@ -910,4 +956,5 @@ impl<C, SN: ?Sized, S: ?Sized, M, EM, T: StateInfo + 'static> Eth for EthClient<
 	fn compile_solidity(&self, _: String) -> Result<Bytes> {
 		Err(errors::deprecated("Compilation of Solidity via RPC is deprecated".to_string()))
 	}
+
 }
