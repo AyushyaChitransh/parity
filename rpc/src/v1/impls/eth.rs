@@ -600,10 +600,10 @@ impl<C, SN: ?Sized, S: ?Sized, M, EM, T: StateInfo + 'static> Eth for EthClient<
 		Box::new(future::done(res))
 	}
 
-	fn account_status(&self, address: RpcH160, num: Trailing<BlockNumber>) -> (BoxFuture<RpcU256>,BoxFuture<RpcU256>){
+	fn account_status(&self, address: RpcH160, num: Trailing<BlockNumber>) -> BoxFuture<RpcU256>{
 		let balance = self.balance(address, num);
 		let nonce = self.transaction_count(address, num);
-		return (balance, nonce);
+		return balance;
 	}
 
 	fn block_transaction_count_by_hash(&self, hash: RpcH256) -> BoxFuture<Option<RpcU256>> {
