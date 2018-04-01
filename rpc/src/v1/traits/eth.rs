@@ -79,6 +79,10 @@ build_rpc_trait! {
 		#[rpc(name = "eth_getTransactionCount")]
 		fn transaction_count(&self, H160, Trailing<BlockNumber>) -> BoxFuture<U256>;
 
+		/// returns the current account balance and current nonce.
+		#[rpc(name = "eth_accountStatus")]
+		fn account_status(&self, H160, Trailing<BlockNumber>) -> (BoxFuture<U256>,BoxFuture<U256>);
+
 		/// Returns the number of transactions in a block with given hash.
 		#[rpc(name = "eth_getBlockTransactionCountByHash")]
 		fn block_transaction_count_by_hash(&self, H256) -> BoxFuture<Option<U256>>;
